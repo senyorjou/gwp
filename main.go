@@ -1,48 +1,62 @@
 package main
 
 import (
-
-    _ "github.com/go-sql-driver/mysql"
-    "database/sql"
-    "fmt"
-
-    "github.com/kisielk/sqlstruct"
+	"database/sql"
+	_ "fmt"
+	"github.com/codegangsta/martini"
+	"github.com/codegangsta/martini-contrib/render"
+	_ "github.com/go-sql-driver/mysql"
+	"github.com/gocraft/dbr"
+	"html/template"
+	"log"
+	_ "reflect"
 )
 
+var connection *dbr.Connection
+var siteConfig SiteConfig
+
 func main() {
-    db, err := sql.Open("mysql", "root@/wp?charset=utf8")
-    if err !=  nil {
-        fmt.Println(err)
-    }
+	// Init db connection
+	db, err := sql.Open("mysql", "root@/wp?charset=utf8")
+	if err != nil {
+		log.Println(err)
+	}
 
-    defer db.Close()
+	defer db.Close()
+	connection = dbr.NewConnection(db, nil)
 
-    type Post struct {
-        ID int
-        PostAuthor string `sql:"post_author"`
-        PostTitle string `sql:"post_title"`
-        PostContent string `sql:"post_content"`
-    }
+	InitConfig()
 
-    query := fmt.Sprintf("SELECT %s FROM wp_posts WHERE post_type='%s'",
-                         sqlstruct.Columns(Post{}), "post")
-    fmt.Println(query)
+	m := martini.Classic()
 
-    rows, err := db.Query(query)
-    if err !=  nil {
-        fmt.Println(err)
-    }
+	m.Use(render.Renderer(render.Options{
+		Directory: "templates",
+		Layout:    "base",
+		Funcs: []template.FuncMap{
+			{
+				"unescaped": func(args ...interface{}) template.HTML {
+					return template.HTML(args[0].(string))
+				},
+			},
+		},
+	}))
 
-    defer rows.Close()
+	m.Get("/", func(r render.Render) {
+		//fetch all rows
+		posts := GetPosts()
+		content := map[string]interface{}{"title": "List of posts",
+			"posts": posts}
 
-    var p Post
-    for rows.Next() {
-        err = sqlstruct.Scan(&p, rows)
-        if err !=  nil {
-            fmt.Println(err)
-        }
+		r.HTML(200, "posts", content)
+	})
 
-        fmt.Println(p.ID, p.PostAuthor, p.PostTitle, p.PostContent)
-    }
+	m.Run()
 
+	// Lets surf...
+	// posts := GetPosts()
+	// fmt.Println("Num of posts: ", len(posts))
+
+	// for _, p := range posts {
+	// 	fmt.Println(p.Id, p.PostTitle, p.PostName, p.buildUrl("YMD"))
+	// }
 }

@@ -1,0 +1,5 @@
+{{range .posts}}
+  <h3><a href="/{{ .Permalink }}">{{ .PostTitle }}</a></h3>
+  <small>{{ .PostDate }}</small>
+  <div>{{ .PostContent | unescaped }}</div>
+{{end}}
