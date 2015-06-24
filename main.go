@@ -50,13 +50,12 @@ func main() {
 		r.HTML(200, "posts", content)
 	})
 
+	m.Get("/:year/:month/:day/:postname", func(r render.Render, p martini.Params) {
+		post := GetPost(p["postname"])
+		content := map[string]interface{}{"title": post.PostTitle,
+			"post": post}
+
+		r.HTML(200, "post", content)
+	})
 	m.Run()
-
-	// Lets surf...
-	// posts := GetPosts()
-	// fmt.Println("Num of posts: ", len(posts))
-
-	// for _, p := range posts {
-	// 	fmt.Println(p.Id, p.PostTitle, p.PostName, p.buildUrl("YMD"))
-	// }
 }

@@ -28,11 +28,8 @@ func InitConfig() {
 		log.Println(err.Error())
 	}
 
-	log.Println(options)
+	// log.Println(options)
 
 	siteConfig.URLFormat = "YMD"
-}
-
-func (c SiteConfig) Get(key string) string {
-	return "foo"
+	siteConfig.BlogDescription = "YMD"
 }
