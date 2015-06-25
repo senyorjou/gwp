@@ -22,7 +22,7 @@ func GetPosts() []*Post {
 	return posts
 }
 
-func GetPost(postName string) Post {
+func GetPost(postName string) (Post, error) {
 	dbrSess := connection.NewSession(nil)
 
 	var post Post
@@ -36,5 +36,5 @@ func GetPost(postName string) Post {
 		log.Println(err.Error())
 	}
 
-	return post
+	return post, err
 }

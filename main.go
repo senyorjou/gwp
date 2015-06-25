@@ -9,6 +9,7 @@ import (
 	"github.com/gocraft/dbr"
 	"html/template"
 	"log"
+	_ "net/http"
 	_ "reflect"
 )
 
@@ -28,6 +29,10 @@ func main() {
 	InitConfig()
 
 	m := martini.Classic()
+
+	static := martini.Static("static",
+		martini.StaticOptions{Fallback: "/404.tmpl", SkipLogging: true})
+	m.Use(static)
 
 	m.Use(render.Renderer(render.Options{
 		Directory: "templates",
@@ -51,11 +56,19 @@ func main() {
 	})
 
 	m.Get("/:year/:month/:day/:postname", func(r render.Render, p martini.Params) {
-		post := GetPost(p["postname"])
+		post, err := GetPost(p["postname"])
+		if err != nil {
+			throw404(r, err)
+			return
+		}
 		content := map[string]interface{}{"title": post.PostTitle,
 			"post": post}
-
 		r.HTML(200, "post", content)
 	})
+
+	// 404
+	m.NotFound(throw404)
+
+	// RUN
 	m.Run()
 }

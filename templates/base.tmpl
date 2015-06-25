@@ -1,13 +1,16 @@
-
 <!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{.title}}</title>
+    <style type="text/css" ></style>
+    <link rel="stylesheet" href="/css/main.css" type="text/css" media="all" />
   </head>
 
-  <body>
-    {{yield}}
+  <body class="home blog">
+    <div id="page" class="hfeed site">
+      {{yield}}
+    </div>
   </body>
 </html>
