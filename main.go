@@ -46,29 +46,37 @@ func main() {
 		},
 	}))
 
-	m.Get("/", func(r render.Render) {
-		//fetch all rows
-		posts := GetPosts()
-		content := map[string]interface{}{"title": "List of posts",
-			"posts": posts}
-
-		r.HTML(200, "posts", content)
-	})
-
-	m.Get("/:year/:month/:day/:postname", func(r render.Render, p martini.Params) {
-		post, err := GetPost(p["postname"])
-		if err != nil {
-			throw404(r, err)
-			return
-		}
-		content := map[string]interface{}{"title": post.PostTitle,
-			"post": post}
-		r.HTML(200, "post", content)
-	})
+	m.Get("/", HandleIndex)
+	m.Get("/:year/:month/:day/:postname", HandlePost)
 
 	// 404
 	m.NotFound(throw404)
 
 	// RUN
 	m.Run()
+}
+
+func HandleIndex(r render.Render) {
+	//fetch all rows
+	posts := GetPosts()
+	content := map[string]interface{}{"title": "List of posts",
+		"posts": posts}
+
+	r.HTML(200, "posts", content)
+}
+
+func HandlePost(r render.Render, p martini.Params) {
+	post, err := GetPost(p["postname"])
+	if err != nil {
+		throw404(r)
+		return
+	}
+	content := map[string]interface{}{"title": post.PostTitle,
+		"post": post}
+	r.HTML(200, "post", content)
+}
+
+func throw404(r render.Render) {
+	content := map[string]interface{}{"title": "Not Found"}
+	r.HTML(404, "404", content)
 }
