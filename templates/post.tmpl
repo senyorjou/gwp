@@ -1,3 +1,17 @@
-<h3><a href="/{{ .post.Permalink }}">{{ .post.PostTitle }}</a></h3>
-<small>{{ .post.PostDate }}</small>
+<h1 class="entry-title">
+    {{ .post.PostTitle }}
+</h1>
+<div class="enry-meta">
+  <span class="date">
+      <time class="entry-date" datetime="{{ .PostDate }}">{{ .post.PostDate }}</time>
+  </span>
+  <span class="categories-links">
+    {{range .post.Categories}}
+      <a href="/category/{{.Slug}}/" rel="category tag">{{.Name}}</a>
+    {{end}}
+  </span>
+  <span class="author vcard">
+    <a class="url fn n" href="http://localhost/wp/index.php/author/admin/" title="View all posts by admin" rel="author">admin</a>
+  </span>
+</div>
 <div>{{ .post.PostContent | unescaped }}</div>

@@ -5,6 +5,11 @@ import (
 	"strings"
 )
 
+type Taxs struct {
+	Name	string
+	Slug	string
+}
+
 type Post struct {
 	Id          int64
 	PostDate    string
@@ -12,6 +17,8 @@ type Post struct {
 	PostName    string
 	PostTitle   string
 	PostContent string
+	PostExcerpt string
+	Categories	[]Taxs
 }
 
 func (p Post) Permalink() string {
