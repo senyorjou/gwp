@@ -18,7 +18,7 @@ var siteConfig SiteConfig
 
 func main() {
 	// Init db connection
-	db, err := sql.Open("mysql", "root@/wp?charset=utf8")
+	db, err := sql.Open("mysql", "wp@/wp?charset=utf8")
 	if err != nil {
 		log.Println(err)
 	}
@@ -48,6 +48,7 @@ func main() {
 
 	m.Get("/", HandleIndex)
 	m.Get("/:year/:month/:day/:postname", HandlePost)
+	m.Get("/:postname", HandlePost)
 
 	// 404
 	m.NotFound(throw404)
@@ -59,8 +60,10 @@ func main() {
 func HandleIndex(r render.Render) {
 	//fetch all rows
 	posts := GetPosts()
+	options := GetOptions()
+
 	content := map[string]interface{}{"title": "List of posts",
-		"posts": posts}
+		"posts": posts, "options": options}
 
 	r.HTML(200, "posts", content)
 }

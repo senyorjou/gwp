@@ -6,8 +6,10 @@ import (
 )
 
 type Taxs struct {
-	Name	string
-	Slug	string
+	Name     string
+	Slug     string
+	Taxonomy string
+	Count    int
 }
 
 type Post struct {
@@ -18,7 +20,16 @@ type Post struct {
 	PostTitle   string
 	PostContent string
 	PostExcerpt string
-	Categories	[]Taxs
+	PostType    string
+	MenuOrder   int // only for pages
+	Categories  []Taxs
+	Tags        []Taxs
+}
+
+type Options struct {
+	Pages      []*Post
+	Categories []Taxs
+	Tags       []Taxs
 }
 
 func (p Post) Permalink() string {
