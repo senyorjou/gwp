@@ -14,6 +14,7 @@ func GetOptions() Options {
 	dbrSess := connection.NewSession(nil)
 	var options Options
 
+	// load pages
 	_, err := dbrSess.Select(POST_FIELDS).
 		From("wp_posts").
 		Where("post_type=?", "page").
@@ -25,6 +26,7 @@ func GetOptions() Options {
 		log.Println(err.Error())
 	}
 
+	// load taxonomies
 	var taxs []*Taxs
 
 	raw_sql := `SELECT WT.name, WT.slug, WTT.taxonomy, WTT.count FROM wp_terms WT
@@ -48,10 +50,21 @@ func GetOptions() Options {
 		}
 	}
 
+	// load misc
+	// pageCount
+	raw_sql = `SELECT COUNT(id) FROM wp_posts
+		WHERE post_type = "post" AND post_status="publish"`
+
+	tmpPosts, err := dbrSess.SelectBySql(raw_sql).ReturnInt64()
+	options.TotalPages = int(tmpPosts) / siteConfig.PostxPage
+	if err != nil {
+		log.Println(err.Error())
+	}
+
 	return options
 }
 
-func GetPosts() []*Post {
+func GetPosts(page int) []*Post {
 	var posts []*Post
 	dbrSess := connection.NewSession(nil)
 
@@ -59,6 +72,9 @@ func GetPosts() []*Post {
 		From("wp_posts").
 		Where("post_type=?", "post").
 		Where("post_status=?", "publish").
+		OrderBy("post_date DESC").
+		Limit(uint64(siteConfig.PostxPage)).
+		Offset(uint64(page * siteConfig.PostxPage)).
 		LoadStructs(&posts)
 
 	if err != nil {

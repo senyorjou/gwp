@@ -30,6 +30,8 @@ type Options struct {
 	Pages      []*Post
 	Categories []Taxs
 	Tags       []Taxs
+	TotalPosts int
+	TotalPages int
 }
 
 func (p Post) Permalink() string {

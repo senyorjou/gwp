@@ -9,14 +9,17 @@ import (
 	"github.com/gocraft/dbr"
 	"html/template"
 	"log"
+	"time"
 	_ "net/http"
 	_ "reflect"
+	"strconv"
 )
 
 var connection *dbr.Connection
 var siteConfig SiteConfig
 
 func main() {
+
 	// Init db connection
 	db, err := sql.Open("mysql", "wp@/wp?charset=utf8")
 	if err != nil {
@@ -47,23 +50,28 @@ func main() {
 	}))
 
 	m.Get("/", HandleIndex)
+	m.Get("/page/:page", HandleIndex)
 	m.Get("/:year/:month/:day/:postname", HandlePost)
 	m.Get("/:postname", HandlePost)
 
-	// 404
 	m.NotFound(throw404)
 
-	// RUN
 	m.Run()
 }
 
-func HandleIndex(r render.Render) {
-	//fetch all rows
-	posts := GetPosts()
+func HandleIndex(r render.Render, p martini.Params) {
+	startTime := time.Now()
+	page, err := strconv.Atoi(p["page"])
+	if (err != nil) {
+		page = 0
+	}
+
+	posts := GetPosts(page)
 	options := GetOptions()
 
 	content := map[string]interface{}{"title": "List of posts",
-		"posts": posts, "options": options}
+		"posts": posts, "options": options, "elapsed": time.Since(startTime),
+		"page": page}
 
 	r.HTML(200, "posts", content)
 }

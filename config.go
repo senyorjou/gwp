@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"strconv"
 )
 
 type SiteConfig struct {
@@ -28,8 +29,18 @@ func InitConfig() {
 		log.Println(err.Error())
 	}
 
-	// log.Println(options)
+	for _, option := range(options) {
+		switch option.OptionName {
+		case "blogname":
+			siteConfig.BlogName = option.OptionValue
+
+		case "blogdescription":
+			siteConfig.BlogDescription = option.OptionValue
+
+		case "posts_per_page":
+			siteConfig.PostxPage, _ = strconv.Atoi(option.OptionValue)
+		}
+	}
 
 	siteConfig.URLFormat = "YMD"
-	siteConfig.BlogDescription = "YMD"
 }
