@@ -1,6 +1,8 @@
 package main
 
 import (
+	"encoding/json"
+	"fmt"
 	"log"
 	"strconv"
 	"strings"
@@ -66,21 +68,39 @@ func GetOptions() Options {
 
 func GetPosts(page int) []*Post {
 	var posts []*Post
-	dbrSess := connection.NewSession(nil)
-
-	_, err := dbrSess.Select(POST_FIELDS).
-		From("wp_posts").
-		Where("post_type=?", "post").
-		Where("post_status=?", "publish").
-		OrderBy("post_date DESC").
-		Limit(uint64(siteConfig.PostxPage)).
-		Offset(uint64(page * siteConfig.PostxPage)).
-		LoadStructs(&posts)
+	cache_key := fmt.Sprintf("posts-%d", page)
+	cache_data, err := cache.Do("GET", cache_key)
 
 	if err != nil {
-		log.Println(err.Error())
+		log.Println(err)
 	} else {
-		loadCategories(posts)
+		if cache_data != nil {
+			json.Unmarshal(cache_data.([]byte), &posts)
+		} else {
+			dbrSess := connection.NewSession(nil)
+
+			_, err = dbrSess.Select(POST_FIELDS).
+				From("wp_posts").
+				Where("post_type=?", "post").
+				Where("post_status=?", "publish").
+				OrderBy("post_date DESC").
+				Limit(uint64(siteConfig.PostxPage)).
+				Offset(uint64(page * siteConfig.PostxPage)).
+				LoadStructs(&posts)
+
+			if err != nil {
+				log.Println(err.Error())
+			} else {
+				loadTaxs(posts)
+			}
+
+			cache_data, err := json.Marshal(posts)
+			if err != nil {
+				log.Println(err)
+			}
+
+			cache.Do("SET", cache_key, cache_data)
+		}
 	}
 
 	return posts
@@ -89,26 +109,45 @@ func GetPosts(page int) []*Post {
 func GetPost(postName string) (Post, error) {
 	var post Post
 	var posts []*Post
-	dbrSess := connection.NewSession(nil)
 
-	err := dbrSess.Select(POST_FIELDS).
-		From("wp_posts").
-		Where("post_name=?", postName).
-		LoadStruct(&post)
+	cache_key := fmt.Sprintf("post-%s", postName)
+	cache_data, err := cache.Do("GET", cache_key)
 
 	if err != nil {
-		log.Println(err.Error())
+		log.Println(err)
 	} else {
-		posts = append(posts, &post)
-		loadCategories(posts)
+		if cache_data != nil {
+			json.Unmarshal(cache_data.([]byte), &post)
+
+		} else {
+			dbrSess := connection.NewSession(nil)
+
+			err := dbrSess.Select(POST_FIELDS).
+				From("wp_posts").
+				Where("post_name=?", postName).
+				LoadStruct(&post)
+
+			if err != nil {
+				log.Println(err.Error())
+			} else {
+				posts = append(posts, &post)
+				loadTaxs(posts)
+			}
+
+			cache_data, err = json.Marshal(post)
+			if err != nil {
+				log.Println(err)
+			}
+			cache.Do("SET", cache_key, cache_data)
+		}
 	}
 
 	return post, err
 }
 
-// loadCategories retrieves all categories related to post list passed at once
-// it builds an intermediate map to map categories to a single post id
-func loadCategories(posts []*Post) {
+// loadTaxs retrieves all taxonomies related to post list passed at once
+// it builds an intermediate struct to map taxonomies to a single post id
+func loadTaxs(posts []*Post) {
 	type TaxonomiesPosts struct {
 		ObjectId int64
 		Name     string
@@ -122,7 +161,7 @@ func loadCategories(posts []*Post) {
 	cats := map[int64][]Taxs{}
 	tags := map[int64][]Taxs{}
 	var postType = make(map[int64]string)
-	// taxtype := map[int64]string
+
 	dbrSess := connection.NewSession(nil)
 
 	for _, post := range posts {

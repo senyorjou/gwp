@@ -5,18 +5,21 @@ import (
 	_ "fmt"
 	"github.com/codegangsta/martini"
 	"github.com/codegangsta/martini-contrib/render"
+	"github.com/garyburd/redigo/redis"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/gocraft/dbr"
 	"html/template"
 	"log"
-	"time"
 	_ "net/http"
 	_ "reflect"
 	"strconv"
+	"time"
 )
 
 var connection *dbr.Connection
 var siteConfig SiteConfig
+
+var cache redis.Conn
 
 func main() {
 
@@ -28,6 +31,13 @@ func main() {
 
 	defer db.Close()
 	connection = dbr.NewConnection(db, nil)
+
+	cache, err = redis.Dial("tcp", ":6379")
+	if err != nil {
+		log.Println(err)
+	}
+
+	defer cache.Close()
 
 	InitConfig()
 
@@ -62,7 +72,8 @@ func main() {
 func HandleIndex(r render.Render, p martini.Params) {
 	startTime := time.Now()
 	page, err := strconv.Atoi(p["page"])
-	if (err != nil) {
+
+	if err != nil {
 		page = 0
 	}
 

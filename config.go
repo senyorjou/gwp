@@ -29,7 +29,7 @@ func InitConfig() {
 		log.Println(err.Error())
 	}
 
-	for _, option := range(options) {
+	for _, option := range options {
 		switch option.OptionName {
 		case "blogname":
 			siteConfig.BlogName = option.OptionValue
