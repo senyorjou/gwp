@@ -13,54 +13,74 @@ const (
 )
 
 func GetOptions() Options {
-	dbrSess := connection.NewSession(nil)
 	var options Options
-
-	// load pages
-	_, err := dbrSess.Select(POST_FIELDS).
-		From("wp_posts").
-		Where("post_type=?", "page").
-		Where("post_status=?", "publish").
-		OrderBy("menu_order ASC").
-		LoadStructs(&options.Pages)
+	cache_key := "options"
+	cache_data, err := cache.Do("GET", cache_key)
 
 	if err != nil {
-		log.Println(err.Error())
+		log.Println(err)
 	}
 
-	// load taxonomies
-	var taxs []*Taxs
+	if cache_data != nil {
+		json.Unmarshal(cache_data.([]byte), &options)
+	} else {
 
-	raw_sql := `SELECT WT.name, WT.slug, WTT.taxonomy, WTT.count FROM wp_terms WT
-		LEFT JOIN wp_term_taxonomy WTT ON (WTT.term_taxonomy_id = WT.term_id)
-		WHERE WTT.taxonomy IN ("category", "post_tag")`
+		dbrSess := connection.NewSession(nil)
 
-	_, err = dbrSess.SelectBySql(raw_sql).LoadStructs(&taxs)
-	if err != nil {
-		log.Println(err.Error())
-	}
+		// load pages
+		_, err := dbrSess.Select(POST_FIELDS).
+			From("wp_posts").
+			Where("post_type=?", "page").
+			Where("post_status=?", "publish").
+			OrderBy("menu_order ASC").
+			LoadStructs(&options.Pages)
 
-	for _, tax := range taxs {
-		switch tax.Taxonomy {
-		case "category":
-			options.Categories = append(options.Categories,
-				Taxs{tax.Name, tax.Slug, tax.Taxonomy, tax.Count})
-
-		case "post_tag":
-			options.Tags = append(options.Tags,
-				Taxs{tax.Name, tax.Slug, tax.Taxonomy, tax.Count})
+		if err != nil {
+			log.Println(err.Error())
 		}
-	}
 
-	// load misc
-	// pageCount
-	raw_sql = `SELECT COUNT(id) FROM wp_posts
-		WHERE post_type = "post" AND post_status="publish"`
+		// load taxonomies
+		var taxs []*Taxs
 
-	tmpPosts, err := dbrSess.SelectBySql(raw_sql).ReturnInt64()
-	options.TotalPages = int(tmpPosts) / siteConfig.PostxPage
-	if err != nil {
-		log.Println(err.Error())
+		raw_sql := `SELECT WT.name, WT.slug, WTT.taxonomy, WTT.count FROM wp_terms WT
+			LEFT JOIN wp_term_taxonomy WTT ON (WTT.term_taxonomy_id = WT.term_id)
+			WHERE WTT.taxonomy IN ("category", "post_tag")`
+
+		_, err = dbrSess.SelectBySql(raw_sql).LoadStructs(&taxs)
+		if err != nil {
+			log.Println(err.Error())
+		}
+
+		for _, tax := range taxs {
+			switch tax.Taxonomy {
+			case "category":
+				options.Categories = append(options.Categories,
+					Taxs{tax.Name, tax.Slug, tax.Taxonomy, tax.Count})
+
+			case "post_tag":
+				options.Tags = append(options.Tags,
+					Taxs{tax.Name, tax.Slug, tax.Taxonomy, tax.Count})
+			}
+		}
+
+		// load misc
+		// pageCount
+		raw_sql = `SELECT COUNT(id) FROM wp_posts
+			WHERE post_type = "post" AND post_status="publish"`
+
+		tmpPosts, err := dbrSess.SelectBySql(raw_sql).ReturnInt64()
+		options.TotalPages = int(tmpPosts) / siteConfig.PostxPage
+		if err != nil {
+			log.Println(err.Error())
+		}
+
+		cache_data, err := json.Marshal(options)
+		if err != nil {
+			log.Println(err)
+		}
+
+		cache.Do("SET", cache_key, cache_data)
+
 	}
 
 	return options
@@ -73,34 +93,34 @@ func GetPosts(page int) []*Post {
 
 	if err != nil {
 		log.Println(err)
+	}
+
+	if cache_data != nil {
+		json.Unmarshal(cache_data.([]byte), &posts)
 	} else {
-		if cache_data != nil {
-			json.Unmarshal(cache_data.([]byte), &posts)
+		dbrSess := connection.NewSession(nil)
+
+		_, err = dbrSess.Select(POST_FIELDS).
+			From("wp_posts").
+			Where("post_type=?", "post").
+			Where("post_status=?", "publish").
+			OrderBy("post_date DESC").
+			Limit(uint64(siteConfig.PostxPage)).
+			Offset(uint64(page * siteConfig.PostxPage)).
+			LoadStructs(&posts)
+
+		if err != nil {
+			log.Println(err.Error())
 		} else {
-			dbrSess := connection.NewSession(nil)
-
-			_, err = dbrSess.Select(POST_FIELDS).
-				From("wp_posts").
-				Where("post_type=?", "post").
-				Where("post_status=?", "publish").
-				OrderBy("post_date DESC").
-				Limit(uint64(siteConfig.PostxPage)).
-				Offset(uint64(page * siteConfig.PostxPage)).
-				LoadStructs(&posts)
-
-			if err != nil {
-				log.Println(err.Error())
-			} else {
-				loadTaxs(posts)
-			}
-
-			cache_data, err := json.Marshal(posts)
-			if err != nil {
-				log.Println(err)
-			}
-
-			cache.Do("SET", cache_key, cache_data)
+			loadTaxs(posts)
 		}
+
+		cache_data, err := json.Marshal(posts)
+		if err != nil {
+			log.Println(err)
+		}
+
+		cache.Do("SET", cache_key, cache_data)
 	}
 
 	return posts
@@ -115,31 +135,31 @@ func GetPost(postName string) (Post, error) {
 
 	if err != nil {
 		log.Println(err)
+	}
+
+	if cache_data != nil {
+		json.Unmarshal(cache_data.([]byte), &post)
+
 	} else {
-		if cache_data != nil {
-			json.Unmarshal(cache_data.([]byte), &post)
+		dbrSess := connection.NewSession(nil)
 
+		err := dbrSess.Select(POST_FIELDS).
+			From("wp_posts").
+			Where("post_name=?", postName).
+			LoadStruct(&post)
+
+		if err != nil {
+			log.Println(err.Error())
 		} else {
-			dbrSess := connection.NewSession(nil)
-
-			err := dbrSess.Select(POST_FIELDS).
-				From("wp_posts").
-				Where("post_name=?", postName).
-				LoadStruct(&post)
-
-			if err != nil {
-				log.Println(err.Error())
-			} else {
-				posts = append(posts, &post)
-				loadTaxs(posts)
-			}
-
-			cache_data, err = json.Marshal(post)
-			if err != nil {
-				log.Println(err)
-			}
-			cache.Do("SET", cache_key, cache_data)
+			posts = append(posts, &post)
+			loadTaxs(posts)
 		}
+
+		cache_data, err = json.Marshal(post)
+		if err != nil {
+			log.Println(err)
+		}
+		cache.Do("SET", cache_key, cache_data)
 	}
 
 	return post, err
