@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	_ "fmt"
 	"github.com/codegangsta/martini"
-	"github.com/codegangsta/martini-contrib/render"
+	"github.com/flosch/pongo2"
 	"github.com/garyburd/redigo/redis"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/gocraft/dbr"
@@ -14,12 +14,14 @@ import (
 	_ "reflect"
 	"strconv"
 	"time"
-	"github.com/flosch/pongo2"
+)
+
+const (
+	TTL_CACHE = 60 // 1 minute for all queries
 )
 
 var connection *dbr.Connection
 var siteConfig SiteConfig
-
 var cache redis.Conn
 
 func main() {
@@ -45,20 +47,8 @@ func main() {
 	m := martini.Classic()
 
 	static := martini.Static("static",
-		martini.StaticOptions{Fallback: "/404.tmpl", SkipLogging: true})
+		martini.StaticOptions{Fallback: "/404.html", SkipLogging: true})
 	m.Use(static)
-
-	m.Use(render.Renderer(render.Options{
-		Directory: "templates",
-		Layout:    "base",
-		Funcs: []template.FuncMap{
-			{
-				"unescaped": func(args ...interface{}) template.HTML {
-					return template.HTML(args[0].(string))
-				},
-			},
-		},
-	}))
 
 	m.Get("/", HandleIndex)
 	m.Get("/page/:page", HandleIndex)
@@ -82,14 +72,14 @@ func HandlePost(w http.ResponseWriter, r *http.Request, p martini.Params) {
 
 	tpl := pongo2.Must(pongo2.FromFile("templates/post.html"))
 
-    ctxt := pongo2.Context{"title": post.PostTitle, "post": post,
-    	"options": options}
+	ctxt := pongo2.Context{"title": post.PostTitle, "post": post,
+		"options": options}
 
-    err = tpl.ExecuteWriter(ctxt, w)
+	err = tpl.ExecuteWriter(ctxt, w)
 
-    if err != nil {
-        http.Error(w, err.Error(), http.StatusInternalServerError)
-    }
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 }
 
 func HandleIndex(w http.ResponseWriter, r *http.Request, p martini.Params) {
@@ -105,26 +95,23 @@ func HandleIndex(w http.ResponseWriter, r *http.Request, p martini.Params) {
 
 	tpl := pongo2.Must(pongo2.FromFile("templates/posts.html"))
 
-    ctxt := pongo2.Context{	"title": "List of posts",
-		"posts": posts, "options": options, "elapsed": time.Since(startTime),
-		"page": page}
+	ctxt := pongo2.Context{"title": "List of posts",
+		"posts": posts, "options": options, "page": page}
 
-    err = tpl.ExecuteWriter(ctxt, w)
+	err = tpl.ExecuteWriter(ctxt, w)
 
-    if err != nil {
-        http.Error(w, err.Error(), http.StatusInternalServerError)
-    }
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+	log.Println(time.Since(startTime))
 }
 
 func throw404(w http.ResponseWriter, r *http.Request) {
 	tpl := pongo2.Must(pongo2.FromFile("templates/404.html"))
+	ctxt := pongo2.Context{}
+	err := tpl.ExecuteWriter(ctxt, w)
 
-	log.Println("Foo")
-    ctxt := pongo2.Context{}
-
-    err := tpl.ExecuteWriter(ctxt, w)
-
-    if err != nil {
-        http.Error(w, err.Error(), http.StatusInternalServerError)
-    }
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 }
