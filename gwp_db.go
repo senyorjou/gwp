@@ -24,9 +24,7 @@ func GetOptions() Options {
 	if cache_data != nil {
 		json.Unmarshal(cache_data.([]byte), &options)
 	} else {
-
 		dbrSess := connection.NewSession(nil)
-
 		// load pages
 		_, err := dbrSess.Select(POST_FIELDS).
 			From("wp_posts").
@@ -69,9 +67,15 @@ func GetOptions() Options {
 			WHERE post_type = "post" AND post_status="publish"`
 
 		tmpPosts, err := dbrSess.SelectBySql(raw_sql).ReturnInt64()
-		options.TotalPages = int(tmpPosts) / siteConfig.PostxPage
+
 		if err != nil {
 			log.Println(err.Error())
+		}
+
+		if siteConfig.PostxPage == 0 {
+			options.TotalPages = 1
+		} else {
+			options.TotalPages = int(tmpPosts) / siteConfig.PostxPage
 		}
 
 		cache_data, err := json.Marshal(options)
@@ -79,7 +83,7 @@ func GetOptions() Options {
 			log.Println(err)
 		}
 
-		cache.Do("SET", cache_key, cache_data)
+		cache.Do("SETEX", cache_key, 10, cache_data)
 
 	}
 
@@ -150,6 +154,7 @@ func GetPost(postName string) (Post, error) {
 
 		if err != nil {
 			log.Println(err.Error())
+			return post, err
 		} else {
 			posts = append(posts, &post)
 			loadTaxs(posts)

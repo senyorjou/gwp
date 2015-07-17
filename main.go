@@ -10,10 +10,11 @@ import (
 	"github.com/gocraft/dbr"
 	"html/template"
 	"log"
-	_ "net/http"
+	"net/http"
 	_ "reflect"
 	"strconv"
 	"time"
+	"github.com/flosch/pongo2"
 )
 
 var connection *dbr.Connection
@@ -69,7 +70,29 @@ func main() {
 	m.Run()
 }
 
-func HandleIndex(r render.Render, p martini.Params) {
+func HandlePost(w http.ResponseWriter, r *http.Request, p martini.Params) {
+	post, err := GetPost(p["postname"])
+
+	if err != nil {
+		throw404(w, r)
+		return
+	}
+
+	options := GetOptions()
+
+	tpl := pongo2.Must(pongo2.FromFile("templates/post.html"))
+
+    ctxt := pongo2.Context{"title": post.PostTitle, "post": post,
+    	"options": options}
+
+    err = tpl.ExecuteWriter(ctxt, w)
+
+    if err != nil {
+        http.Error(w, err.Error(), http.StatusInternalServerError)
+    }
+}
+
+func HandleIndex(w http.ResponseWriter, r *http.Request, p martini.Params) {
 	startTime := time.Now()
 	page, err := strconv.Atoi(p["page"])
 
@@ -80,25 +103,28 @@ func HandleIndex(r render.Render, p martini.Params) {
 	posts := GetPosts(page)
 	options := GetOptions()
 
-	content := map[string]interface{}{"title": "List of posts",
+	tpl := pongo2.Must(pongo2.FromFile("templates/posts.html"))
+
+    ctxt := pongo2.Context{	"title": "List of posts",
 		"posts": posts, "options": options, "elapsed": time.Since(startTime),
 		"page": page}
 
-	r.HTML(200, "posts", content)
+    err = tpl.ExecuteWriter(ctxt, w)
+
+    if err != nil {
+        http.Error(w, err.Error(), http.StatusInternalServerError)
+    }
 }
 
-func HandlePost(r render.Render, p martini.Params) {
-	post, err := GetPost(p["postname"])
-	if err != nil {
-		throw404(r)
-		return
-	}
-	content := map[string]interface{}{"title": post.PostTitle,
-		"post": post}
-	r.HTML(200, "post", content)
-}
+func throw404(w http.ResponseWriter, r *http.Request) {
+	tpl := pongo2.Must(pongo2.FromFile("templates/404.html"))
 
-func throw404(r render.Render) {
-	content := map[string]interface{}{"title": "Not Found"}
-	r.HTML(404, "404", content)
+	log.Println("Foo")
+    ctxt := pongo2.Context{}
+
+    err := tpl.ExecuteWriter(ctxt, w)
+
+    if err != nil {
+        http.Error(w, err.Error(), http.StatusInternalServerError)
+    }
 }

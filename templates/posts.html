@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block title %}{{title}}{% endblock %}
+
+{% block content %}
+
+{% for post in posts %}
+  <h1 class="entry-title">
+      <a href="/{{ post.Permalink }}">{{ post.PostTitle }}</a>
+  </h1>
+  <div class="enry-meta">
+    <span class="date">
+        <time class="entry-date" datetime="{{ post.PostDate }}">{{ post.PostDate }}</time>
+    </span>
+    {{if .Categories}}
+    <span class="categories-links">
+      {% for category in post.Categories %}
+        <a href="/category/{{category.Slug}}/" rel="category tag">{{category.Name}}</a>
+      {% endfor %}
+    </span>
+    {{end}}
+    {% if post.Tags %}
+    <span class="tags-links">
+      {% for tag in post.Tags %}
+        <a href="/tag/{{tag.Slug}}/" rel=" tag">{{tag.Name}}</a>
+      {% endfor %}
+    </span>
+    {% endif %}
+    {{end}}
+    <span class="author vcard">
+      <a class="url fn n" href="http://localhost/wp/index.php/author/admin/" title="View all posts by admin" rel="author">admin</a>
+    </span>
+  </div>
+  <div>{{ post.PostContent | safe }}</div>
+{% endfor %}
+
+<hr />
+{% for page in options.Pages %}
+  <span>{{page.PostTitle}}</span>
+{% endfor %}
+<hr />
+<div>
+  <span>Categories: </span>
+  {% for option in options.Categories %}
+    <span>{{option.Name}}</span>
+  {% endfor %}
+</div>
+
+<div>
+<span>Tags: </span>
+{% for tag in options.Tags %}
+  <span>{{tag.Name}}</span>
+{% endfor %}
+</div>
+
+<div>
+  <strong>Total time: </strong>{{elapsed}}
+</div>
+
+{% endblock %}

@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block title %}{{title}}{% endblock %}
+
+{% block content %}
+<h1 class="entry-title">
+    {{ post.PostTitle }}
+</h1>
+<div class="enry-meta">
+  <span class="date">
+      <time class="entry-date" datetime="{{ post.PostDate }}">{{ post.PostDate }}</time>
+  </span>
+  <span class="categories-links">
+    {% for category in post.Categories %}
+      <a href="/category/{{category.Slug}}/" rel="category tag">{{category.Name}}</a>
+    {% endfor %}
+  </span>
+</div>
+<div>{{ post.PostContent | safe }}</div>
+{% endblock %}
