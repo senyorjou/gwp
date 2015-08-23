@@ -82,9 +82,7 @@ func GetOptions() Options {
 		if err != nil {
 			log.Println(err)
 		}
-
-		cache.Do("SETEX", cache_key, TTL_CACHE, cache_data)
-
+		cache.Do("SETEX", cache_key, CACHE_TTL, cache_data)
 	}
 
 	return options
@@ -123,7 +121,7 @@ func GetPosts(page int) []*Post {
 		if err != nil {
 			log.Println(err)
 		}
-		cache.Do("SETEX", cache_key, TTL_CACHE, cache_data)
+		cache.Do("SETEX", cache_key, CACHE_TTL, cache_data)
 	}
 
 	return posts
@@ -163,7 +161,7 @@ func GetPost(postName string) (Post, error) {
 		if err != nil {
 			log.Println(err)
 		}
-		cache.Do("SETEX", cache_key, TTL_CACHE, cache_data)
+		cache.Do("SETEX", cache_key, CACHE_TTL, cache_data)
 	}
 
 	return post, err

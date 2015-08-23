@@ -8,7 +8,6 @@ import (
 	"github.com/garyburd/redigo/redis"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/gocraft/dbr"
-	"html/template"
 	"log"
 	"net/http"
 	_ "reflect"
@@ -17,7 +16,7 @@ import (
 )
 
 const (
-	TTL_CACHE = 60 // 1 minute for all queries
+	CACHE_TTL = 30 // 10 sec for all queries
 )
 
 var connection *dbr.Connection
